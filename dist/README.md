@@ -1,4 +1,4 @@
-## Condtional Switch Datasource Plugin for Grafana
+## Target Label Rewrite Datasource Plugin for Grafana
 
 #### Changelog
 

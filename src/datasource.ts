@@ -21,7 +21,7 @@ export class TargetLabelRewriteDatasource {
         return Promise.resolve([]);
       }
 
-      const filtered = _.filter(targets, (t) => {
+      const filtered = _.filter(targets, t => {
         return !t.hide;
       });
 
@@ -32,8 +32,8 @@ export class TargetLabelRewriteDatasource {
       return this.datasourceSrv.get(dsName).then(ds => {
         const opt = _.cloneDeep(options);
         opt.targets = filtered;
-        return ds.query(opt).then((result) => {
-          result.data.forEach((d) => {
+        return ds.query(opt).then(result => {
+          result.data.forEach(d => {
             if (this.instanceSettings.jsonData && this.instanceSettings.jsonData[d.target]) {
               d.target = this.instanceSettings.jsonData[d.target];
             }
@@ -49,6 +49,6 @@ export class TargetLabelRewriteDatasource {
   }
 
   testDatasource() {
-    return this.$q.when({ status: "success", message: "Data source is working", title: "Success" });
+    return this.$q.when({ status: 'success', message: 'Data source is working', title: 'Success' });
   }
 }

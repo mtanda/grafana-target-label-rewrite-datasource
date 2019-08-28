@@ -1,5 +1,3 @@
 import { TargetLabelRewriteDatasource } from './datasource';
 
-export {
-  TargetLabelRewriteDatasource as Datasource
-};
+export { TargetLabelRewriteDatasource as Datasource };

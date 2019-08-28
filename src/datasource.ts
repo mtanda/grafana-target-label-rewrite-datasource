@@ -15,8 +15,8 @@ export class TargetLabelRewriteDatasource {
   }
 
   query(options) {
-    var sets = _.groupBy(options.targets, 'datasource');
-    var promises = _.map(sets, targets => {
+    const sets = _.groupBy(options.targets, 'datasource');
+    const promises = _.map(sets, targets => {
       const dsName = targets[0].datasource;
       if (dsName === 'Target Label Rewrite') {
         return Promise.resolve([]);

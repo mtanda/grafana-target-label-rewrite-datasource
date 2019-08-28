@@ -6,6 +6,7 @@ export class TargetLabelRewriteDatasource {
   datasourceSrv: any;
   templateSrv: any;
 
+  /** @ngInject */
   constructor(instanceSettings, $q, datasourceSrv, templateSrv) {
     this.instanceSettings = instanceSettings;
     this.$q = $q;

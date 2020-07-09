@@ -1,5 +1,4 @@
 import { DataSource } from './datasource';
-import { DataSourcePlugin } from '@grafana/data';
-import { TargetLabelRewriteQuery, TargetLabelRewriteOptions } from './types';
+import { DataSourcePlugin, DataQuery, DataSourceJsonData } from '@grafana/data';
 
-export const plugin = new DataSourcePlugin<DataSource, TargetLabelRewriteQuery, TargetLabelRewriteOptions>(DataSource);
+export const plugin = new DataSourcePlugin<DataSource, DataQuery, DataSourceJsonData>(DataSource);

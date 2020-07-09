@@ -1,51 +1,98 @@
-import _ from 'lodash';
-import { DataSourceApi, DataSourceInstanceSettings } from '@grafana/data';
-import { TargetLabelRewriteQuery, TargetLabelRewriteOptions } from './types';
+import cloneDeep from 'lodash/cloneDeep';
+import groupBy from 'lodash/groupBy';
+import { from, of, Observable, forkJoin } from 'rxjs';
+import { map, mergeMap, mergeAll } from 'rxjs/operators';
 
-export class DataSource extends DataSourceApi<TargetLabelRewriteQuery, TargetLabelRewriteOptions> {
-  instanceSettings: any;
-  datasourceSrv: any;
+import {
+  LoadingState,
+  DataSourceApi,
+  DataQuery,
+  DataQueryRequest,
+  DataQueryResponse,
+  DataSourceInstanceSettings,
+} from '@grafana/data';
+import { getDataSourceSrv } from '@grafana/runtime';
 
-  /** @ngInject */
-  constructor(instanceSettings: DataSourceInstanceSettings<TargetLabelRewriteOptions>, datasourceSrv) {
+export const MIXED_DATASOURCE_NAME = 'Target Label Rewrite';
+
+export interface BatchedQueries {
+  datasource: Promise<DataSourceApi>;
+  targets: DataQuery[];
+}
+
+export class DataSource extends DataSourceApi<DataQuery> {
+  constructor(instanceSettings: DataSourceInstanceSettings) {
     super(instanceSettings);
-    this.instanceSettings = instanceSettings;
-    this.datasourceSrv = datasourceSrv;
   }
 
-  async query(options) {
-    const sets = _.groupBy(options.targets, 'datasource');
-    const promises = _.map(sets, async targets => {
-      const dsName = targets[0].datasource;
-      if (dsName === 'Target Label Rewrite') {
-        return [];
-      }
-
-      const filtered = _.filter(targets, t => {
-        return !t.hide;
-      });
-
-      if (filtered.length === 0) {
-        return { data: [] };
-      }
-
-      const ds = await this.datasourceSrv.get(dsName);
-      const opt = _.cloneDeep(options);
-      opt.targets = filtered;
-      let result = await ds.query(opt);
-      result.data.forEach(d => {
-        if (this.instanceSettings.jsonData && this.instanceSettings.jsonData[d.target]) {
-          d.target = this.instanceSettings.jsonData[d.target];
-        }
-      });
-      return result;
+  query(request: DataQueryRequest<DataQuery>): Observable<DataQueryResponse> {
+    // Remove any invalid queries
+    const queries = request.targets.filter(t => {
+      return t.datasource !== MIXED_DATASOURCE_NAME;
     });
 
-    const results = await Promise.all(promises);
-    return { data: _.flatten(_.map(results, 'data')) };
+    if (!queries.length) {
+      return of({ data: [] } as DataQueryResponse); // nothing
+    }
+
+    // Build groups of queries to run in parallel
+    const sets: { [key: string]: DataQuery[] } = groupBy(queries, 'datasource');
+    const mixed: BatchedQueries[] = [];
+
+    for (const key in sets) {
+      const targets = sets[key];
+      const dsName = targets[0].datasource as string;
+
+      mixed.push({
+        datasource: getDataSourceSrv().get(dsName, request.scopedVars),
+        targets,
+      });
+    }
+
+    return this.batchQueries(mixed, request);
   }
 
-  async testDatasource() {
-    return { status: 'success', message: 'Data source is working', title: 'Success' };
+  batchQueries(mixed: BatchedQueries[], request: DataQueryRequest<DataQuery>): Observable<DataQueryResponse> {
+    const runningQueries = mixed.filter(this.isQueryable).map((query, i) =>
+      from(query.datasource).pipe(
+        mergeMap((api: DataSourceApi) => {
+          const dsRequest = cloneDeep(request);
+          dsRequest.requestId = `mixed-${i}-${dsRequest.requestId || ''}`;
+          dsRequest.targets = query.targets;
+
+          return from(api.query(dsRequest)).pipe(
+            map(response => {
+              return {
+                ...response,
+                data: response.data || [],
+                state: LoadingState.Loading,
+                key: `mixed-${i}-${response.key || ''}`,
+              } as DataQueryResponse;
+            })
+          );
+        })
+      )
+    );
+
+    return forkJoin(runningQueries).pipe(map(this.markAsDone), mergeAll());
+  }
+
+  testDatasource() {
+    return Promise.resolve({});
+  }
+
+  private isQueryable(query: BatchedQueries): boolean {
+    return query && Array.isArray(query.targets) && query.targets.length > 0;
+  }
+
+  private markAsDone(responses: DataQueryResponse[]): DataQueryResponse[] {
+    const { length } = responses;
+
+    if (length === 0) {
+      return responses;
+    }
+
+    responses[length - 1].state = LoadingState.Done;
+    return responses;
   }
 }

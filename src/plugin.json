@@ -7,6 +7,10 @@
   "metrics": true,
   "mixed": true,
 
+  "queryOptions": {
+    "minInterval": true
+  },
+
   "info": {
     "description": "Target Label Rewrite datasource",
     "author": {
@@ -16,12 +20,12 @@
       {"name": "GitHub", "url": "https://github.com/mtanda/grafana-target-label-rewrite-datasource"},
       {"name": "MIT License", "url": "https://github.com/mtanda/grafana-target-label-rewrite-datasource/blob/master/LICENSE"}
     ],
-    "version": "1.0.1",
-    "updated": "2020-01-22"
+    "version": "1.1.0",
+    "updated": "2020-07-14"
   },
 
   "dependencies": {
-    "grafanaVersion": "6.5.x",
+    "grafanaVersion": "7.x.x",
     "plugins": [ ]
   }
 }

@@ -21,8 +21,10 @@ export interface BatchedQueries {
 }
 
 export class DataSource extends DataSourceApi<DataQuery> {
+  instanceSettings: any;
   constructor(instanceSettings: DataSourceInstanceSettings) {
     super(instanceSettings);
+    this.instanceSettings = instanceSettings;
   }
 
   query(request: DataQueryRequest<DataQuery>): Observable<DataQueryResponse> {
@@ -62,6 +64,18 @@ export class DataSource extends DataSourceApi<DataQuery> {
 
           return from(api.query(dsRequest)).pipe(
             map(response => {
+              response.data.forEach(d => {
+                if (d.target) {
+                  if (this.instanceSettings.jsonData && this.instanceSettings.jsonData[d.target]) {
+                    d.target = this.instanceSettings.jsonData[d.target];
+                  }
+                }
+                if (d.name) {
+                  if (this.instanceSettings.jsonData && this.instanceSettings.jsonData[d.name]) {
+                    d.name = this.instanceSettings.jsonData[d.name];
+                  }
+                }
+              });
               return {
                 ...response,
                 data: response.data || [],

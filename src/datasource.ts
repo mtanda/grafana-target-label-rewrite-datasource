@@ -55,38 +55,48 @@ export class DataSource extends DataSourceApi<DataQuery> {
   }
 
   batchQueries(mixed: BatchedQueries[], request: DataQueryRequest<DataQuery>): Observable<DataQueryResponse> {
-    const runningQueries = mixed.filter(this.isQueryable).map((query, i) =>
-      from(query.datasource).pipe(
-        mergeMap((api: DataSourceApi) => {
-          const dsRequest = cloneDeep(request);
-          dsRequest.requestId = `mixed-${i}-${dsRequest.requestId || ''}`;
-          dsRequest.targets = query.targets;
+    const runningQueries = mixed
+      .filter(this.isQueryable)
+      .map((query, i) =>
+        from(query.datasource).pipe(
+          mergeMap((api: DataSourceApi) => {
+            const dsRequest = cloneDeep(request);
+            dsRequest.requestId = `mixed-${i}-${dsRequest.requestId || ''}`;
+            dsRequest.targets = query.targets;
 
-          return from(api.query(dsRequest)).pipe(
-            map(response => {
-              response.data.forEach(d => {
-                if (d.target) {
-                  if (this.instanceSettings.jsonData && this.instanceSettings.jsonData[d.target]) {
-                    d.target = this.instanceSettings.jsonData[d.target];
+            let o: any = from(api.query(dsRequest)).pipe(
+              map(response => {
+                response.data.forEach(d => {
+                  if (d.target) {
+                    if (this.instanceSettings.jsonData && this.instanceSettings.jsonData[d.target]) {
+                      d.target = this.instanceSettings.jsonData[d.target];
+                    }
                   }
-                }
-                if (d.name) {
-                  if (this.instanceSettings.jsonData && this.instanceSettings.jsonData[d.name]) {
-                    d.name = this.instanceSettings.jsonData[d.name];
+                  if (d.name) {
+                    if (this.instanceSettings.jsonData && this.instanceSettings.jsonData[d.name]) {
+                      d.name = this.instanceSettings.jsonData[d.name];
+                    }
                   }
-                }
-              });
-              return {
-                ...response,
-                data: response.data || [],
-                state: LoadingState.Loading,
-                key: `mixed-${i}-${response.key || ''}`,
-              } as DataQueryResponse;
-            })
-          );
-        })
+                });
+                return {
+                  ...response,
+                  data: response.data || [],
+                  state: LoadingState.Loading,
+                  key: `mixed-${i}-${response.key || ''}`,
+                } as DataQueryResponse;
+              })
+            );
+            // workaround
+            o[Symbol.observable] = o['@@observable'];
+            return o;
+          })
+        )
       )
-    );
+      .map((o: any) => {
+        // workaround
+        o[Symbol.observable] = o['@@observable'];
+        return o;
+      });
 
     return forkJoin(runningQueries).pipe(map(this.markAsDone), mergeAll());
   }

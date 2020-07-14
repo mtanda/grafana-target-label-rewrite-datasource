@@ -67,9 +67,9 @@ export class DataSource extends DataSourceApi<DataQuery> {
             let o: any = from(api.query(dsRequest)).pipe(
               map(response => {
                 response.data.forEach(d => {
-                  if (d.target) {
-                    if (this.instanceSettings.jsonData && this.instanceSettings.jsonData[d.target]) {
-                      d.target = this.instanceSettings.jsonData[d.target];
+                  if (d.title) {
+                    if (this.instanceSettings.jsonData && this.instanceSettings.jsonData[d.title]) {
+                      d.title = this.instanceSettings.jsonData[d.title];
                     }
                   }
                   if (d.name) {
